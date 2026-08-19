@@ -2,12 +2,33 @@ import os
 import json
 import time
 import requests
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 1. MAKE SURE YOUR WEBHOOK IS PASTED PERFECTLY BETWEEN THESE QUOTES
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539575319592439890/Ce20OKXJ5oLglpL8plmpbQlxQYvxtf_KRZc1oCNeaxYaAtIp8AkbwnjYYnfTR_G467Z4E"
+# 1. DOUBLE CHECK YOUR DISCORD WEBHOOK LINK IS HERE
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539575319592439890/Ce20OKXJ5oLglpL8plmpbQlxQYvxtf_KRZc1oCNeaxYaAtIp8AkbwnjYYnfTR_G467Z4"
 
-MAP_DATA_URL = "https://map.stoneworks.gg/abex/#minecraft_overworld;flat;64,64,48;3"
+MAP_DATA_URL = "https://stoneworks.gg"
 CACHE_FILE = "previous_claims.json"
+
+# --- FAKE WEB SERVER TO SATISFY RENDER FIREWALL ---
+class SimpleWebHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(b"Stoneworks Tracker Bot is Active and Healthy!")
+
+    def log_message(self, format, *args):
+        return  # Keeps the logs clean and quiet
+
+def run_fake_web_server():
+    # Render tells apps what port to use via the 'PORT' environment variable (defaults to 10000)
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleWebHandler)
+    print(f"Fake Web Server listening on port {port}...")
+    server.serve_forever()
+# --------------------------------------------------
 
 def send_discord_notification(title, description, color):
     if DISCORD_WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_URL_HERE":
@@ -26,24 +47,20 @@ def send_discord_notification(title, description, color):
     }
     try:
         r = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-        print(f"Discord response code: {r.status_code} (204 means successful!)")
+        print(f"Discord alert sent! Response: {r.status_code}")
     except Exception as e:
         print(f"Error connecting to Discord: {e}")
 
 def check_for_changes():
-    print("Attempting to connect to the Stoneworks server data...")
+    print("Checking live map database updates...")
     try:
-        # We add a common web browser header so the Stoneworks map server doesn't block PythonAnywhere
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(MAP_DATA_URL, headers=headers, timeout=15)
-        print(f"Stoneworks server response code: {response.status_code}")
-
         if response.status_code != 200:
-            print("Stoneworks map data is temporarily unavailable or blocking the connection.")
             return
         data = response.json()
     except Exception as e:
-        print(f"Connection failed: {e}")
+        print(f"Connection update failed: {e}")
         return
 
     current_claims = {}
@@ -54,7 +71,6 @@ def check_for_changes():
                 label = area_info.get('label', 'Unnamed Claim').replace("<br />", " ").strip()
                 current_claims[area_id] = {'label': label}
 
-    # FOR THE TEST: We force it to tell us it's working immediately
     if not os.path.exists(CACHE_FILE):
         print(f"Successfully connected! Creating local map baseline with {len(current_claims)} towns.")
         send_discord_notification("🤖 Tracker Status", f"Online! Successfully cached {len(current_claims)} active towns from the Stoneworks map.", 255)
@@ -78,11 +94,15 @@ def check_for_changes():
 
 if __name__ == "__main__":
     print("Tracker initializing...")
-    # Run once right away
+    
+    # Start the fake web server in a separate background lane so it doesn't jam our loop
+    web_thread = threading.Thread(target=run_fake_web_server, daemon=True)
+    web_thread.start()
+    
+    # Run our tracker loop immediately
     check_for_changes()
-
-    # Keep running every 5 minutes
+    
     while True:
-        print("Sleeping for 5 minutes before checking for updates...")
-        time.sleep(300)
+        time.sleep(300)  # Checks every 5 minutes
         check_for_changes()
+
