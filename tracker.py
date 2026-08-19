@@ -5,36 +5,34 @@ import requests
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# 1. DOUBLE CHECK YOUR DISCORD WEBHOOK LINK IS HERE
+# =========================================================================
+# 🛠️ YOUR WEBHOOK LINK IS READY TO GO HERE
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539575319592439890/Ce20OKXJ5oLglpL8plmpbQlxQYvxtf_KRZc1oCNeaxYaAtIp8AkbwnjYYnfTR_G467Z4"
+# =========================================================================
 
 MAP_DATA_URL = "https://stoneworks.gg"
 CACHE_FILE = "previous_claims.json"
 
-# --- FAKE WEB SERVER TO SATISFY RENDER FIREWALL ---
 class SimpleWebHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
         self.wfile.write(b"Stoneworks Tracker Bot is Active and Healthy!")
-
     def log_message(self, format, *args):
-        return  # Keeps the logs clean and quiet
+        return
 
 def run_fake_web_server():
-    # Render tells apps what port to use via the 'PORT' environment variable (defaults to 10000)
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), SimpleWebHandler)
-    print(f"Fake Web Server listening on port {port}...")
     server.serve_forever()
-# --------------------------------------------------
 
 def send_discord_notification(title, description, color):
-    if DISCORD_WEBHOOK_URL == "YOUR_DISCORD_WEBHOOK_URL_HERE":
-        print(f"📡 LOG: {title} - {description}")
-        return
+    print(f"🔄 Transmitting payload to Discord Forum: {title}...")
+    
+    # We add 'thread_name' so Discord automatically spins up a clean thread in your forum channel!
     payload = {
+        "thread_name": "Stoneworks Live Map Logs",
         "embeds": [
             {
                 "title": title,
@@ -47,12 +45,11 @@ def send_discord_notification(title, description, color):
     }
     try:
         r = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-        print(f"Discord alert sent! Response: {r.status_code}")
+        print(f"📊 Discord Server Response: {r.status_code}")
     except Exception as e:
-        print(f"Error connecting to Discord: {e}")
+        print(f"🚨 Network error: {e}")
 
 def check_for_changes():
-    print("Checking live map database updates...")
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(MAP_DATA_URL, headers=headers, timeout=15)
@@ -72,8 +69,8 @@ def check_for_changes():
                 current_claims[area_id] = {'label': label}
 
     if not os.path.exists(CACHE_FILE):
-        print(f"Successfully connected! Creating local map baseline with {len(current_claims)} towns.")
-        send_discord_notification("🤖 Tracker Status", f"Online! Successfully cached {len(current_claims)} active towns from the Stoneworks map.", 255)
+        print(f"Initial setup complete. Saved baseline database with {len(current_claims)} active towns.")
+        send_discord_notification("🤖 System Status", f"Online! Successfully cached {len(current_claims)} active towns from the Stoneworks map.", 255)
         with open(CACHE_FILE, 'w') as f:
             json.dump(current_claims, f)
         return
@@ -94,17 +91,12 @@ def check_for_changes():
 
 if __name__ == "__main__":
     print("Tracker initializing...")
-    
-    # Start the fake web server in a separate background lane so it doesn't jam our loop
     web_thread = threading.Thread(target=run_fake_web_server, daemon=True)
     web_thread.start()
     
-    # Run our tracker loop immediately
     check_for_changes()
-    send_discord_notification("🤖 Bot Test", "The connection to Render is successful! Tracking is active.", 255)
-    send_discord_notification("🤖 System Status", "The claim tracking bot has successfully deployed and is actively monitoring Abexilas!", 255)
-
+    
     while True:
-        time.sleep(300)  # Checks every 5 minutes
+        time.sleep(300)
         check_for_changes()
 
