@@ -6,7 +6,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # 1. DOUBLE CHECK YOUR DISCORD WEBHOOK LINK IS HERE
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539575319592439890/Ce20OKXJ5oLglpL8plmpbQlxQYvxtf_KRZc1oCNeaxYaAtIp8AkbwnjYYnfTR_G467Z4"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539575319592439890/Ce20OKXJ5oLglpL8plmpbQlxQYvxtf_KRZc1oCNeaxYaAtIp8AkbwnjYYnfTR_G467Z4
 
 MAP_DATA_URL = "https://stoneworks.gg"
 CACHE_FILE = "previous_claims.json"
