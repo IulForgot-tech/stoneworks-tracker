@@ -102,6 +102,7 @@ if __name__ == "__main__":
     # Run our tracker loop immediately
     check_for_changes()
     send_discord_notification("🤖 Bot Test", "The connection to Render is successful! Tracking is active.", 255)
+    send_discord_notification("🤖 System Status", "The claim tracking bot has successfully deployed and is actively monitoring Abexilas!", 255)
 
     while True:
         time.sleep(300)  # Checks every 5 minutes
